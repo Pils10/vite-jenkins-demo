@@ -9,5 +9,6 @@ document.querySelector('#app').innerHTML = `
       declared in Git, and reconciled by Argo CD.
     </p>
     <code>Change this text, push it, and watch dev update.</code>
+	<p>This is Version 1.0.0 Production</p>
   </section>
 `
