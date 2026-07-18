@@ -111,38 +111,45 @@ pipeline {
           // Retrying from a fresh clone is a small, understandable lab solution.
           retry(3) {
             sshagent(credentials: ['gitops-ssh']) {
-              sh '''
-                set -eux
-
-                rm -rf gitops
-                git clone --branch main "${GITOPS_REPO}" gitops
-
-                cd "gitops/apps/vite-demo/overlays/${DEPLOY_ENV}"
-
-                # This edits only the image stanza for the selected environment.
-                # Argo CD will later detect the resulting Git commit.
-                kustomize edit set image \
-                  "${IMAGE_PLACEHOLDER}=${IMAGE}:${IMAGE_TAG}"
-
-                cd ../../../..
-
-                git config user.name "Jenkins GitOps Bot"
-                git config user.email "jenkins-gitops-bot@example.invalid"
-
-                git add "apps/vite-demo/overlays/${DEPLOY_ENV}/kustomization.yaml"
-
-                # A retry may discover that another run already wrote this exact state.
-                if git diff --cached --quiet; then
-                  echo "GitOps repository already declares this image."
-                  exit 0
-                fi
-
-                git commit -m \
-                  "deploy(vite-demo): ${DEPLOY_ENV} -> ${IMAGE_TAG}"
-
-                git push origin HEAD:main
-              '''
-            }
+                sh '''
+                  set -eux
+              
+                  # ssh-agent supplies Jenkins'\'' private deploy key.
+                  # GIT_SSH_COMMAND tells Git exactly which trusted-host file to use.
+                  export GIT_SSH_COMMAND="ssh \
+                    -o UserKnownHostsFile=/var/jenkins_home/.ssh/known_hosts \
+                    -o StrictHostKeyChecking=yes"
+              
+                  # This is an inexpensive test of host verification, authentication,
+                  # repository access, and the credential selected above.
+                  git ls-remote "${GITOPS_REPO}" HEAD
+              
+                  rm -rf gitops
+                  git clone --branch main "${GITOPS_REPO}" gitops
+              
+                  cd "gitops/apps/vite-demo/overlays/${DEPLOY_ENV}"
+              
+                  kustomize edit set image \
+                    "${IMAGE_PLACEHOLDER}=${IMAGE}:${IMAGE_TAG}"
+              
+                  cd ../../../..
+              
+                  git config user.name "Jenkins GitOps Bot"
+                  git config user.email "jenkins-gitops-bot@example.invalid"
+              
+                  git add "apps/vite-demo/overlays/${DEPLOY_ENV}/kustomization.yaml"
+              
+                  if git diff --cached --quiet; then
+                    echo "GitOps repository already declares this image."
+                    exit 0
+                  fi
+              
+                  git commit -m \
+                    "deploy(vite-demo): ${DEPLOY_ENV} -> ${IMAGE_TAG}"
+              
+                  git push origin HEAD:main
+                '''
+              }
           }
         }
       }
