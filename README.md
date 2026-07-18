@@ -1,6 +1,6 @@
 # vite-jenkins-demo
 
-Tiny Vite application used by the Kind, Jenkins, and Argo CD GitOps lab.
+Tiny Vite application used by the Kind, Jenkins, and Argo CD GitOps lab for learning.
 
 The `Jenkinsfile` uses:
 
